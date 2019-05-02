@@ -8,7 +8,7 @@ defmodule Dlex.Type.Query do
   @behaviour Dlex.Type
 
   @impl true
-  def execute(channel, request), do: ApiStub.query(channel, request)
+  def execute(channel, request, opts), do: ApiStub.query(channel, request, opts)
 
   @impl true
   def describe(query, _opts), do: query

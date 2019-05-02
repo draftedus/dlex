@@ -8,7 +8,7 @@ defmodule Dlex.Type.Mutation do
   @behaviour Dlex.Type
 
   @impl true
-  def execute(channel, request), do: ApiStub.mutate(channel, request)
+  def execute(channel, request, opts), do: ApiStub.mutate(channel, request, opts)
 
   @impl true
   def describe(%Query{statement: statement} = query, opts) do

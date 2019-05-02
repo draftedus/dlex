@@ -11,6 +11,7 @@ defmodule Dlex.Protocol do
   require Logger
 
   defstruct [:channel, :connected, :opts, :txn_context, txn_aborted?: false]
+  @grpc_options [:timeout]
 
   @impl true
   def connect(opts) do
@@ -79,8 +80,8 @@ defmodule Dlex.Protocol do
   end
 
   @impl true
-  def disconnect(_error, _state) do
-    nil
+  def disconnect(_error, state) do
+    :ok
   end
 
   ## Transaction API
@@ -90,19 +91,19 @@ defmodule Dlex.Protocol do
     do: {:ok, nil, %{state | txn_context: TxnContext.new(), txn_aborted?: false}}
 
   @impl true
-  def handle_rollback(_opts, state), do: finish_txn(state, :rollback)
+  def handle_rollback(opts, state), do: finish_txn(state, :rollback)
 
   @impl true
-  def handle_commit(_opts, state), do: finish_txn(state, :commit)
+  def handle_commit(opts, state), do: finish_txn(state, :commit, opts)
 
   defp finish_txn(%{txn_aborted?: true} = state, txn_result) do
     {:error, %Error{action: txn_result, reason: :aborted}, state}
   end
 
-  defp finish_txn(%{channel: channel, txn_context: txn_context} = state, txn_result) do
+  defp finish_txn(%{channel: channel, txn_context: txn_context} = state, txn_result, opts \\ []) do
     state = %{state | txn_context: nil}
-
-    case ApiStub.commit_or_abort(channel, %{txn_context | aborted: txn_result != :commit}) do
+    grpc_opts = Keyword.take(opts, @grpc_options)
+    case ApiStub.commit_or_abort(channel, %{txn_context | aborted: txn_result != :commit}, grpc_opts) do
       {:ok, txn} ->
         {:ok, txn, state}
 
@@ -114,13 +115,14 @@ defmodule Dlex.Protocol do
   ## Query API
 
   @impl true
-  def handle_prepare(query, _opts, %{txn_context: txn_context} = state) do
+  def handle_prepare(query, opts, %{txn_context: txn_context} = state) do
     {:ok, %{query | txn_context: txn_context}, state}
   end
 
   @impl true
-  def handle_execute(%Query{} = query, request, _opts, %{channel: channel} = state) do
-    case Type.execute(channel, query, request) do
+  def handle_execute(%Query{} = query, request, opts, %{channel: channel} = state) do
+    grpc_opts = Keyword.take(opts, @grpc_options)
+    case Type.execute(channel, query, request, grpc_opts) do
       {:ok, result} ->
         {:ok, query, result, check_txn(state, result)}
 
