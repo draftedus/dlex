@@ -2,7 +2,8 @@ defmodule DlexTest do
   use ExUnit.Case
 
   setup_all do
-    {:ok, pid} = Dlex.start_link(pool_size: 2)
+    {:ok, pid} = Dlex.start_link(pool_size: 2, port: 8082, adapter: Dlex.Adapters.HTTP, timeout: 120_000)
+
     Dlex.alter!(pid, %{drop_all: true})
     alter = "name: string @index(term) ."
     Dlex.alter!(pid, alter)
@@ -39,8 +40,7 @@ defmodule DlexTest do
   end
 
   test "mutation nquads", %{pid: pid} do
-    assert %{"luke" => uid_luke, "leia" => uid_leia, "sw1" => uid_sw1} =
-             Dlex.mutate!(pid, @mutation_nquads)
+    assert %{"luke" => uid_luke, "leia" => uid_leia, "sw1" => uid_sw1} = Dlex.mutate!(pid, @mutation_nquads)
 
     assert %{"name" => "Luke Skywalker"} == uid_get(pid, uid_luke)
   end
@@ -70,6 +70,10 @@ defmodule DlexTest do
     assert %{"uid" => ^uid} = get_by_name(pid, "deletion_test")
     assert Dlex.delete!(pid, %{"uid" => uid})
     assert %{"all" => []} = get_by_name(pid, "deletion_test")
+  end
+
+  test "malformed query", %{pid: pid} do
+    assert {:error, _} = Dlex.query(pid, "{ fail(func: eq(name, [])) { uid } } ")
   end
 
   def uid_get(conn, uid) do

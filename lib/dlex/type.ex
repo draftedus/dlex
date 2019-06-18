@@ -5,14 +5,12 @@ defmodule Dlex.Type do
   @callback encode(Dlex.Query.t(), map, Keyword.t()) :: struct
   @callback decode(Dlex.Query.t(), term, Keyword.t()) :: term
 
-  @callback execute(GRPC.Channel.t(), request :: term, Keyword.t()) ::
-              {:ok, struct} | {:error, GRPC.RPCError.t()}
+  @callback execute(GRPC.Channel.t(), request :: term, Keyword.t()) :: {:ok, struct} | {:error, GRPC.RPCError.t()}
 
   @doc """
   Execute request
   """
-  @spec execute(GRPC.Channel.t(), Dlex.Query.t(), struct, Keyword.t()) ::
-          {:ok, struct} | {:error, GRPC.RPCError.t()}
+  @spec execute(GRPC.Channel.t(), Dlex.Query.t(), struct, Keyword.t()) :: {:ok, struct} | {:error, GRPC.RPCError.t()}
   def execute(channel, %{type: type} = _query, request, opts),
     do: type.execute(channel, request, opts)
 
